@@ -12,22 +12,22 @@ directions = {
     "north": {
         "left": "west",
         "right": "east",
-        "move": (1, 0),
+        "move": (0, 1),
     },
     "east": {
         "left": "north",
         "right": "south",
-        "move": (0, 1),
+        "move": (1, 0),
     },
     "south": {
         "left": "east",
         "right": "west",
-        "move": (-1, 0),
+        "move": (0, -1),
     },
     "west": {
         "left": "south",
         "right": "north",
-        "move": (0, -1),
+        "move": (-1, 0),
     }
 }
 
@@ -77,15 +77,34 @@ def place_robot(coords: coord, face: str) -> state:
     return state({"location": coords, "face": face})
 
 
-# ACTIONS ###
+def get_coords(args: str) -> coord:
+    if is_valid_placing(args):
+        x, y, _ = args.strip().split(",")
+        return coord((int(x), int(y)))
+
 
 def set_robot_state(current, new):
     current["location"] = new["location"]
     current["face"] = new["face"]
+    return current
 
+
+def move_robot(new_coords: coord, face: str) -> state:
+    return state({"location": new_coords, "face": face})
+
+
+def user_wants_exit(usr_input: str) -> bool:
+    if usr_input == "exit()" or usr_input == "exit":
+        return True
+
+    return False
+
+
+# ACTIONS ###
 
 def do(command: str, current_state: state):
     cmd = command.strip().split("(")[0]
+
     match cmd:
 
         case "place":
@@ -99,15 +118,42 @@ def do(command: str, current_state: state):
                 return current_state, False
 
         case "report":
-            print(current_state["location"])
+            print(f"I am at: {current_state['location']}, facing:{current_state['face']}")
             return current_state, True
 
+        case "move":
+            coords = move(current_state["location"], directions[current_state["face"].strip().lower()]["move"])
+            if is_valid_move(coords, grid):
+                print(f"Moved to: {coords[0]}, {coords[1]}")
+                new_state = set_robot_state(current_state, move_robot(coords, current_state["face"]))
+                return new_state, True
+            else:
+                print("Can't move there or I might fall down! :-(")
+                return current_state, True
 
-def evaluate(user_ipt: str, current_state: state):
+        case "left":
+            new_state = {
+                "location": current_state["location"],
+                "face": directions[current_state['face'].strip().lower()]['left']
+            }
+            print(f"Turned left! Now facing {new_state['face']}")
+            return set_robot_state(current_state, new_state), True
+
+        case "right":
+            new_state = {
+                "location": current_state["location"],
+                "face": directions[current_state['face'].strip().lower()]['right']
+            }
+            print(f"Turned right! Now facing {new_state['face']}")
+            return set_robot_state(current_state, new_state), True
+
+
+def evaluate(user_ipt: str, current_state: state, placed: bool):
     if is_valid_command(user_ipt, commands):
         return do(user_ipt, current_state)
     else:
         print("I don't know this command!")
+        return current_state, placed
 
 
 assert is_valid_move(coord((0, 0)), grid) is True
@@ -123,6 +169,8 @@ assert is_valid_command(" left(7777777) ", commands) is True
 
 if __name__ == '__main__':
 
+    exited = False
+
     robot_placed = False
 
     robot_state = state({})
@@ -130,8 +178,14 @@ if __name__ == '__main__':
     while True:
         if not robot_placed:
             user_input = input("First: place the robot!\n>> ")
-            robot_state, robot_placed = evaluate(user_input, robot_state)
+            exited = user_wants_exit(user_input)
+            if exited:
+                break
+            robot_state, robot_placed = evaluate(user_input, robot_state, robot_placed)
 
         else:
             user_input = input(">> ")
-            robot_state, robot_placed = evaluate(user_input, robot_state)
+            exited = user_wants_exit(user_input)
+            if exited:
+                break
+            robot_state, robot_placed = evaluate(user_input, robot_state, robot_placed)
