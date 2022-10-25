@@ -58,7 +58,7 @@ def is_valid_command(input_cmd: str, command_list: List[str]) -> bool:
         return False
 
 
-def is_valid_placing(argument: str):
+def is_valid_placing(argument: str) -> bool:
     split_args = argument.strip().split(",")
     try:
         assert len(split_args) == 3
